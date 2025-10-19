@@ -1,0 +1,7 @@
+correlation_threshold: 0.9
+
+# directory containing the .1D ROI time series files
+data_dir: 'Outputs/cpac/filt_noglobal/rois_ho/'
+
+# directory for the processed pytoch geometric .pt files
+output_dir: 'data/'
