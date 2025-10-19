@@ -10,7 +10,7 @@ git clone git@github.com:preprocessed-connectomes-project/abide.git
 cd abide
 rm -fr .git
 rm .gitignore
-python download_abide_preproc.py -d rois_cc200 -p cpac -s filt_noglobal -o ..
+python download_abide_preproc.py -d rois_ho -p cpac -s filt_noglobal -o ..
 ```
 
 # Generate graphs
