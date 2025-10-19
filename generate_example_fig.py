@@ -2,7 +2,7 @@ import numpy as np
 from nilearn import plotting
 import matplotlib.pyplot as plt
 
-atlas_filename = '/home/ryan/dev/mlg/abide/preprocessing/resources/abide_rois/ho_mask_pad.nii.gz'
+atlas_filename = 'abide/preprocessing/resources/abide_rois/ho_mask_pad.nii.gz'
 roi_coords = plotting.find_parcellation_cut_coords(labels_img=atlas_filename)
 file_path = 'Outputs/cpac/filt_noglobal/rois_ho/NYU_0051076_rois_ho.1D'
 
