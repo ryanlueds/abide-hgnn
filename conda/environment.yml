@@ -1,0 +1,20 @@
+name: abide-hgnn
+channels:
+    - pyg
+    - pytorch
+    - conda-forge
+dependencies:
+    - python=3.11
+    - bandit
+    - flake8
+    - mypy
+    - pytest
+    - matplotlib
+    - numpy
+    - pyyaml
+    - pytorch
+    - torchvision
+    - networkx
+    - pyg
+    - nilearn
+    - scikit-learn

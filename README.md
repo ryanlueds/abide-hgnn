@@ -1,8 +1,19 @@
-To install data (you can either copy these commands as is if you're in the root directory of this repo):
+# Setting up environment
+  1. make sure you are in your Project3/conda folder, then enter those commands in the terminal.
+  2. ```mamba env create -f environment.yml```
+  3. ```conda activate abide-hgnn``
+
+# Data installation
+To install data (you can copy and paste these):
 ```
 git clone git@github.com:preprocessed-connectomes-project/abide.git
 cd abide
-python abide/download_abide_preproc.py -d rois_cc200 -p cpac -s filt_noglobal -o ..
+rm -fr .git
+rm .gitignore
+python download_abide_preproc.py -d rois_cc200 -p cpac -s filt_noglobal -o ..
 ```
 
-If you want to clone the preprocessed abide data elsewhere, change the `-o ..` to `-o path/to/abide-hgnn`.
+# Generate graphs
+```
+python rois_to_graph.py && python rois_to_hypergraph.py
+```
