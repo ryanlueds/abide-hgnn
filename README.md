@@ -1,7 +1,7 @@
 # Setting up environment
   1. make sure you are in your Project3/conda folder, then enter those commands in the terminal.
   2. ```mamba env create -f environment.yml```
-  3. ```conda activate abide-hgnn``
+  3. ```conda activate abide-hgnn```
 
 # Data installation
 To install data (you can copy and paste these):
