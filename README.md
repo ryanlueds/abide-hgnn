@@ -9,7 +9,7 @@ To install data (you can copy and paste these):
 git clone git@github.com:preprocessed-connectomes-project/abide.git
 rm -fr abide/.git
 rm abide/.gitignore
-python abide/download_abide_preproc.py -d rois_cc200 -p cpac -s filt_noglobal -o .
+python abide/download_abide_preproc.py -d rois_ho -p cpac -s filt_noglobal -o .
 ```
 
 # Generate graphs
