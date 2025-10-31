@@ -18,3 +18,7 @@ dependencies:
     - pyg
     - nilearn
     - scikit-learn
+    - torchmetrics
+    - pip
+    - pip:
+      - dhg
