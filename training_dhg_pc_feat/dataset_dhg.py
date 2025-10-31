@@ -8,6 +8,7 @@ import pandas as pd
 import os
 import torch.nn.functional as F
 import dhg
+import numpy as np
 
 PATH_GRAPH = "../data/graphs/"
 PATH_HYPERGRAPH = "../data/hypergraphs/"
@@ -20,6 +21,11 @@ def normalize_graph(x: torch.Tensor) -> torch.Tensor:
     sd = x.std(dim=0, keepdim=True)
     return (x - mu) / sd
 
+def calc_pc(X):
+    PC = np.corrcoef(X)
+    PC = np.nan_to_num(PC, nan=0.0)
+    PC = torch.from_numpy(PC).float()
+    return PC
 
 class AbideDatasetDHG(Dataset):
     def __init__(self, train=True, split=0.9, split_seed=0):
@@ -51,8 +57,11 @@ class AbideDatasetDHG(Dataset):
         file_id = x_path_filename.removesuffix("_hypergraph.pt")
 
         x = torch.load(x_path_absolute, weights_only=False)
-        # Truncate to the minimium time series length
-        x.x = normalize_graph(x.x[:, : self.min_dim])
+
+        x.x = calc_pc(x.x)
+
+        # # Truncate to the minimium time series length
+        # x.x = normalize_graph(x.x[:, : self.min_dim])
 
         pairs = x.edge_index.t().tolist()
         num_nodes = x.x.size(0)
@@ -60,6 +69,7 @@ class AbideDatasetDHG(Dataset):
         for n, h in pairs: buckets[h].append(n)
         hedges = [tuple(sorted(set(ns))) for ns in buckets if len(ns) > 0]
         hg = dhg.Hypergraph(num_nodes, hedges)
+
         y = torch.tensor(self.id_to_label_dict[file_id], dtype=torch.long)
         return x.x, y-1, hg
 
