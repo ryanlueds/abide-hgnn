@@ -1,4 +1,4 @@
-correlation_threshold: 0.9
+correlation_threshold: 0.7
 
 # directory containing the .1D ROI time series files
 data_dir: 'Outputs/cpac/filt_noglobal/rois_ho/'
