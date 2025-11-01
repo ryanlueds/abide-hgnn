@@ -25,7 +25,7 @@ def normalize_graph(x: torch.Tensor) -> torch.Tensor:
 
 
 class AbideDataset(Dataset):
-    def __init__(self, is_hypergraph=True, train=True, split=0.5, split_seed=0):
+    def __init__(self, is_hypergraph=True, train=True, split=0.9, split_seed=0):
         self.is_hypergraph = is_hypergraph
         self.dir = PATH_HYPERGRAPH if is_hypergraph else PATH_GRAPH
         all_paths = glob.glob(os.path.join(self.dir, '*.pt'))
@@ -59,7 +59,7 @@ class AbideDataset(Dataset):
 
 
 class AbideCorrMatrixDataset(AbideDataset):
-    def __init__(self, is_hypergraph=True, train=True, split=0.8, split_seed=0, regularize=False, site_means=None, file_id_to_site_id=None):
+    def __init__(self, is_hypergraph=True, train=True, split=0.9, split_seed=0, regularize=False, site_means=None, file_id_to_site_id=None):
         super().__init__(is_hypergraph=is_hypergraph, train=train, split=split, split_seed=split_seed)
         self.regularize = regularize
         self.site_means = site_means

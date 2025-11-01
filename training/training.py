@@ -12,7 +12,7 @@ print(config.DEVICE)
 torch.manual_seed(config.SEED)
 
 abide_train = AbideCorrMatrixDataset(is_hypergraph=True, train=True, regularize=True)
-abide_val = AbideCorrMatrixDataset(is_hypergraph=True, train=False, regularize=True, 
+abide_val = AbideCorrMatrixDataset(is_hypergraph=True, train=False, regularize=False, 
                                    site_means=abide_train.site_means, 
                                    file_id_to_site_id=abide_train.file_id_to_site_id)
 
