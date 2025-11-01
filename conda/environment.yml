@@ -19,7 +19,9 @@ dependencies:
   - pyg
   - nilearn
   - scikit-learn
+  - plotly
   - pip
   - pip:
       - dhg==0.9.5
       - torch_geometric
+      - kaleido
