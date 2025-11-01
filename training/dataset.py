@@ -16,7 +16,7 @@ PATH_ABIDE_LABELS = os.path.join(_FILE_DIR, "..", "abide", "Phenotypic_V1_0b_pre
 
 # pytorch complains if I do `torch.load` with weights_only=False. It also complains if
 # i do weights_only=True, unless I whitelist this garbage
-torch.serialization.add_safe_globals([Data, DataEdgeAttr, DataTensorAttr, GlobalStorage])
+# torch.serialization.add_safe_globals([Data, DataEdgeAttr, DataTensorAttr, GlobalStorage])
 
 def normalize_graph(x: torch.Tensor) -> torch.Tensor:
     mu = x.mean(dim=0, keepdim=True)

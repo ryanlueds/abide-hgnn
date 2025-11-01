@@ -3,6 +3,7 @@ import torch.nn as nn
 from tqdm import tqdm
 import config as config
 from torchmetrics.classification import BinaryAUROC, BinaryAccuracy
+from plotter import save_plot
 
 class Trainer(object):
 
@@ -15,15 +16,51 @@ class Trainer(object):
 
 
     def fit(self, model):
+        history = {
+            'train_loss': [], 'train_acc': [], 'train_auroc': [],
+            'test_loss': [], 'test_acc': [], 'test_auroc': []
+        }
+
         num_epochs = config.EPOCHS
         for epoch in range(num_epochs):
             train_loss, train_acc, train_auroc = self.train_step(model, epoch)
             test_loss, test_acc, test_auroc = self.testing_step(model)
+
+            history['train_loss'].append(train_loss)
+            history['train_acc'].append(train_acc)
+            history['train_auroc'].append(train_auroc)
+            history['test_loss'].append(test_loss)
+            history['test_acc'].append(test_acc)
+            history['test_auroc'].append(test_auroc)
+
             print(
                 f"epoch {epoch+1:>3,}: "
                 f"train loss: {train_loss:.4f}, train acc: {train_acc:.4%}, train AUROC: {train_auroc:.4f}, "
                 f"test loss: {test_loss:.4f}, test acc: {test_acc:.4%}, test AUROC: {test_auroc:.4f}"
             )
+
+        # 1. Loss Plot
+        save_plot(
+            train_metric=history['train_loss'],
+            test_metric=history['test_loss'],
+            metric_name="Loss"
+        )
+
+        # 2. AUROC Plot
+        save_plot(
+            train_metric=history['train_auroc'],
+            test_metric=history['test_auroc'],
+            metric_name="AUROC"
+        )
+
+        # 3. Accuracy Plot
+        save_plot(
+            train_metric=history['train_acc'],
+            test_metric=history['test_acc'],
+            metric_name="Accuracy"
+        )
+
+        print(f"\nCharts saved to 'charts' directory.")
 
 
     def train_step(self, model, epoch):
