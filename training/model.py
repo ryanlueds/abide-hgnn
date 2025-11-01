@@ -4,14 +4,14 @@ import torch.nn.functional as F
 
 
 class HGNN(nn.Module):
-    def __init__(self, in_dim, hidden_dim, num_classes=2, dropout=0.3):
+    def __init__(self, in_dim, hidden_dim, num_classes=2, dropout=0.5):
         super().__init__()
         self.conv1 = HypergraphConv(in_dim, hidden_dim)
-        self.bn1 = nn.BatchNorm1d(hidden_dim)
+        self.ln1 = nn.LayerNorm(hidden_dim)
         self.relu1 = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
         self.conv2 = HypergraphConv(hidden_dim, hidden_dim)
-        self.bn2 = nn.BatchNorm1d(hidden_dim)
+        self.ln2 = nn.LayerNorm(hidden_dim)
         self.relu2 = nn.ReLU()
 
         self.head = nn.Sequential(
@@ -25,11 +25,11 @@ class HGNN(nn.Module):
 
     def forward(self, x, hyperedge_index, batch):
         x = self.conv1(x, hyperedge_index)
-        x = self.bn1(x)
+        x = self.ln1(x)
         x = self.relu1(x)
         x = self.dropout(x)
         x = self.conv2(x, hyperedge_index)
-        x = self.bn2(x)
+        x = self.ln2(x)
         x = self.relu2(x)
 
         x = self.head(x) + x

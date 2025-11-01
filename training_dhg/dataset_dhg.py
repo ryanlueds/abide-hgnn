@@ -9,9 +9,10 @@ import os
 import torch.nn.functional as F
 import dhg
 
-PATH_GRAPH = "../data/graphs/"
-PATH_HYPERGRAPH = "../data/hypergraphs/"
-PATH_ABIDE_LABELS = "../abide/Phenotypic_V1_0b_preprocessed1.csv"
+_FILE_DIR = os.path.dirname(os.path.realpath(__file__))
+PATH_GRAPH = os.path.join(_FILE_DIR, "..", "data", "graphs")
+PATH_HYPERGRAPH = os.path.join(_FILE_DIR, "..", "data", "hypergraphs")
+PATH_ABIDE_LABELS = os.path.join(_FILE_DIR, "..", "abide", "Phenotypic_V1_0b_preprocessed1.csv")
 
 torch.serialization.add_safe_globals([Data, DataEdgeAttr, DataTensorAttr, GlobalStorage])
 
