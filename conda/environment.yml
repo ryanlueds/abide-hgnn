@@ -5,23 +5,20 @@ channels:
   - conda-forge
 dependencies:
   - python=3.10
+  - pyg
+  - torchmetrics
+  - pip
+  - nilearn
+  - scikit-learn
+  - networkx
+  - numpy
+  - pyyaml
+  - plotly
   - bandit
   - flake8
   - mypy
   - pytest
   - matplotlib
-  - numpy
-  - pyyaml
-  - pytorch=1.13.1
-  - torchvision=0.14.1
-  - torchmetrics>=0.10,<1.0
-  - networkx
-  - pyg
-  - nilearn
-  - scikit-learn
-  - plotly
-  - pip
   - pip:
       - dhg==0.9.5
-      - torch_geometric
       - kaleido
