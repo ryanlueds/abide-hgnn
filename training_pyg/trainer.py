@@ -22,6 +22,8 @@ class Trainer(object):
         }
 
         num_epochs = config.EPOCHS
+        best_test_acc = 0.0
+
         for epoch in range(num_epochs):
             train_loss, train_acc, train_auroc, train_precision, train_recall = self.train_step(model, epoch)
             test_loss, test_acc, test_auroc, test_precision, test_recall = self.testing_step(model)
@@ -37,11 +39,54 @@ class Trainer(object):
             history['test_precision'].append(test_precision)
             history['test_recall'].append(test_recall)
 
+            if test_acc > best_test_acc:
+                best_test_acc = test_acc
+                torch.save(model.state_dict(), "pyg_model.pt")
+
             print(
                 f"epoch {epoch+1:>3,}: "
                 f"train loss: {train_loss:.4f}, train acc: {train_acc:.4%}, train AUROC: {train_auroc:.4f}, "
                 f"test loss: {test_loss:.4f}, test acc: {test_acc:.4%}, test AUROC: {test_auroc:.4f}"
             )
+            
+        print(f"--> Saved new best model (Acc: {best_test_acc:.4%})")
+        
+        # 1. Loss Plot
+        save_plot(
+            train_metric=history['train_loss'],
+            test_metric=history['test_loss'],
+            metric_name="Loss"
+        )
+
+        # 2. AUROC Plot
+        save_plot(
+            train_metric=history['train_auroc'],
+            test_metric=history['test_auroc'],
+            metric_name="AUROC"
+        )
+
+        # 3. Accuracy Plot
+        save_plot(
+            train_metric=history['train_acc'],
+            test_metric=history['test_acc'],
+            metric_name="Accuracy"
+        )
+
+        # 4. Precision Plot
+        save_plot(
+            train_metric=history['train_precision'],
+            test_metric=history['test_precision'],
+            metric_name="Precision"
+        )
+
+        # 5. Recall Plot
+        save_plot(
+            train_metric=history['train_recall'],
+            test_metric=history['test_recall'],
+            metric_name="Recall"
+        )
+
+        print(f"\nCharts saved to 'charts' directory.")
 
         # 1. Loss Plot
         save_plot(
@@ -106,9 +151,9 @@ class Trainer(object):
 
         probs = torch.cat(probs)
         targets = torch.cat(targets)
+        train_loss = running_train_loss / len(self.train_loader.dataset)
         train_acc = acc_metric(probs, targets).item()
         train_auroc = auroc_metric(probs, targets).item()
-        train_loss = running_train_loss / len(self.train_loader)
         train_precision = precision_metric(probs, targets).item()
         train_recall = recall_metric(probs, targets).item()
         return train_loss, train_acc, train_auroc, train_precision, train_recall
@@ -137,9 +182,9 @@ class Trainer(object):
 
         probs = torch.cat(probs)
         targets = torch.cat(targets)
+        test_loss = running_test_loss / len(self.test_loader.dataset)
         test_acc = acc_metric(probs, targets).item()
         test_auroc = auroc_metric(probs, targets).item()
-        test_loss = running_test_loss / len(self.test_loader)
         test_precision = precision_metric(probs, targets).item()
         test_recall = recall_metric(probs, targets).item()
         return test_loss, test_acc, test_auroc, test_precision, test_recall
