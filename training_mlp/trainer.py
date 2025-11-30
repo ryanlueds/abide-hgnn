@@ -50,7 +50,7 @@ class Trainer(object):
         targets = torch.cat(targets)
         train_acc = acc_metric(probs, targets).item()
         train_auroc = auroc_metric(probs, targets).item()
-        train_loss = running_train_loss / len(self.train_loader)
+        train_loss = running_train_loss / len(self.train_loader.dataset)
         return train_loss, train_acc, train_auroc
 
     def testing_step(self, model):
@@ -77,6 +77,6 @@ class Trainer(object):
         targets = torch.cat(targets)
         test_acc = acc_metric(probs, targets).item()
         test_auroc = auroc_metric(probs, targets).item()
-        test_loss = running_test_loss / len(self.test_loader)
+        test_loss = running_test_loss / len(self.test_loader.dataset)
         return test_loss, test_acc, test_auroc
 
