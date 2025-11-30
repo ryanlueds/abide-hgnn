@@ -9,8 +9,10 @@ data/**
 
 **/ablation_hgnnp_charts
 **/ablation_unisage_charts
+**/ablation_pyg_charts
 **/unisage_charts
 **/hgnnp_charts
+**/pyg_charts
 
 pyg_model.pt
 dhg_model.pt
