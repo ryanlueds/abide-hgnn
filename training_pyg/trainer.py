@@ -88,6 +88,43 @@ class Trainer(object):
 
         print(f"\nCharts saved to 'charts' directory.")
 
+        # 1. Loss Plot
+        save_plot(
+            train_metric=history['train_loss'],
+            test_metric=history['test_loss'],
+            metric_name="Loss"
+        )
+
+        # 2. AUROC Plot
+        save_plot(
+            train_metric=history['train_auroc'],
+            test_metric=history['test_auroc'],
+            metric_name="AUROC"
+        )
+
+        # 3. Accuracy Plot
+        save_plot(
+            train_metric=history['train_acc'],
+            test_metric=history['test_acc'],
+            metric_name="Accuracy"
+        )
+
+        # 4. Precision Plot
+        save_plot(
+            train_metric=history['train_precision'],
+            test_metric=history['test_precision'],
+            metric_name="Precision"
+        )
+
+        # 5. Recall Plot
+        save_plot(
+            train_metric=history['train_recall'],
+            test_metric=history['test_recall'],
+            metric_name="Recall"
+        )
+
+        print(f"\nCharts saved to 'charts' directory.")
+
     def train_step(self, model, epoch):
         model.train()
         running_train_loss = 0.0

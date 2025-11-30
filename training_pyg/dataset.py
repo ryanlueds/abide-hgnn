@@ -30,9 +30,10 @@ def calc_pc(X):
     return PC
 
 class AbideDataset(Dataset):
-    def __init__(self, is_hypergraph=True, train=True, split=0.9, split_seed=0):
+    def __init__(self, is_hypergraph=True, train=True, split=0.9, split_seed=0, ablation=False):
         self.is_hypergraph = is_hypergraph
         self.dir = PATH_HYPERGRAPH if is_hypergraph else PATH_GRAPH 
+        self.ablation = ablation
 
         all_paths = glob.glob(f'{self.dir}*.pt')
 
@@ -44,9 +45,6 @@ class AbideDataset(Dataset):
         cutoff = int(len(all_paths) * split)
         chosen_idx = perm[:cutoff] if train else perm[cutoff:]
         self.x_paths = [all_paths[i] for i in chosen_idx]
-
-        # self.min_dim = float('inf')
-        # for path in all_paths: self.min_dim = min(self.min_dim, torch.load(path, weights_only=True).x.size(-1))
 
 
     def __len__(self):
@@ -61,6 +59,26 @@ class AbideDataset(Dataset):
         x = torch.load(x_path_absolute)
         # x.x = normalize_graph(x.x[:, :self.min_dim])
         x.x = calc_pc(x.x)
+
+        if self.is_hypergraph and self.ablation:
+            pairs = x.edge_index.t().tolist()
+
+            buckets = [[] for _ in range(x.num_hyperedges)]
+            for n, h in pairs: buckets[h].append(n)
+
+            new_pairs = [[], []]
+            num_hyperedges = 0
+            for h in range(len(buckets)):
+                nodes = sorted(set(buckets[h]))
+                if len(nodes) <= 2 and len(nodes) > 0:
+                    for node in nodes:
+                        new_pairs[0].append(node)
+                        new_pairs[1].append(num_hyperedges)
+                    num_hyperedges += 1
+
+            x.edge_index = torch.tensor(new_pairs, dtype=torch.long)
+            x.num_hyperedges = num_hyperedges
+
         y = torch.tensor(self.id_to_label_dict[file_id], dtype=torch.long)
         return x, y-1 # y-1 to convert {1, 2} into {0, 1}
 
@@ -144,9 +162,9 @@ class AbideDataset(Dataset):
         
 
 if __name__ == "__main__":
-    foo_train = AbideDataset(is_hypergraph=True, train=True)
+    foo_train = AbideDataset(is_hypergraph=True, train=True, ablation=True)
     print(foo_train.__len__())
-    for i in range(foo_train.__len__()):
+    for i in range(5):
         x, y = foo_train[i]
         print(x, y, f"Example {i:3}: {'autism' if y.item() == 0 else 'no autism'}")
     
