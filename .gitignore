@@ -6,3 +6,12 @@ data/**
 **/.DS_Store
 **/__pycache__
 **/charts
+
+**/ablation_hgnnp_charts
+**/ablation_unisage_charts
+**/unisage_charts
+**/hgnnp_charts
+
+pyg_model.pt
+dhg_model.pt
+mlp_model.pt

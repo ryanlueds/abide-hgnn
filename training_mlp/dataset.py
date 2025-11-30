@@ -3,6 +3,7 @@ import glob
 from torch.utils.data import Dataset
 import pandas as pd
 import os
+import numpy as np
 
 PATH_GRAPH = "../data/graphs/"
 PATH_HYPERGRAPH = "../data/hypergraphs/"
@@ -12,6 +13,12 @@ def normalize_graph(x: torch.Tensor) -> torch.Tensor:
     mu = x.mean(dim=0, keepdim=True)
     sd = x.std(dim=0, keepdim=True)
     return (x - mu) / sd
+
+def calc_pc(X):
+    PC = np.corrcoef(X)
+    PC = np.nan_to_num(PC, nan=0.0)
+    PC = torch.from_numpy(PC).float()
+    return PC
 
 class AbideDatasetMLP(Dataset):
     def __init__(self, train=True, split=0.9, split_seed=0):
@@ -42,10 +49,10 @@ class AbideDatasetMLP(Dataset):
 
         data = torch.load(x_path_absolute, weights_only=False)
         # truncate time series
-        x_tensor = data.x[:, :self.min_dim]
+        # x_tensor = data.x[:, :self.min_dim]
         
-        x_tensor = normalize_graph(x_tensor)
-        
+        x_tensor = calc_pc(data.x)
+
         x_flat = x_tensor.flatten()
 
         y = torch.tensor(self.id_to_label_dict[file_id], dtype=torch.long)

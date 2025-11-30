@@ -22,6 +22,8 @@ class Trainer(object):
         }
 
         num_epochs = config.EPOCHS
+        best_test_acc = 0.0
+
         for epoch in range(num_epochs):
             train_loss, train_acc, train_auroc, train_precision, train_recall = self.train_step(model, epoch)
             test_loss, test_acc, test_auroc, test_precision, test_recall = self.testing_step(model)
@@ -37,11 +39,17 @@ class Trainer(object):
             history['test_precision'].append(test_precision)
             history['test_recall'].append(test_recall)
 
+            if test_acc > best_test_acc:
+                best_test_acc = test_acc
+                torch.save(model.state_dict(), "dhg_hgnnp_model.pt")
+
             print(
                 f"epoch {epoch+1:>3,}: "
                 f"train loss: {train_loss:.4f}, train acc: {train_acc:.4%}, train AUROC: {train_auroc:.4f}, "
                 f"test loss: {test_loss:.4f}, test acc: {test_acc:.4%}, test AUROC: {test_auroc:.4f}"
             )
+
+        print(f"--> Saved new best model (Acc: {best_test_acc:.4%})")
 
         # 1. Loss Plot
         save_plot(
