@@ -7,6 +7,7 @@ from torch_geometric.data.storage import GlobalStorage
 import pandas as pd
 import os
 import torch.nn.functional as F
+import numpy as np
 
 
 PATH_GRAPH = "../data/graphs/"
@@ -22,6 +23,11 @@ def normalize_graph(x: torch.Tensor) -> torch.Tensor:
     sd = x.std(dim=0, keepdim=True)
     return (x - mu) / sd
 
+def calc_pc(X):
+    PC = np.corrcoef(X)
+    PC = np.nan_to_num(PC, nan=0.0)
+    PC = torch.from_numpy(PC).float()
+    return PC
 
 class AbideDataset(Dataset):
     def __init__(self, is_hypergraph=True, train=True, split=0.9, split_seed=0):
@@ -39,8 +45,8 @@ class AbideDataset(Dataset):
         chosen_idx = perm[:cutoff] if train else perm[cutoff:]
         self.x_paths = [all_paths[i] for i in chosen_idx]
 
-        self.min_dim = float('inf')
-        for path in all_paths: self.min_dim = min(self.min_dim, torch.load(path, weights_only=True).x.size(-1))
+        # self.min_dim = float('inf')
+        # for path in all_paths: self.min_dim = min(self.min_dim, torch.load(path, weights_only=True).x.size(-1))
 
 
     def __len__(self):
@@ -52,8 +58,9 @@ class AbideDataset(Dataset):
         x_path_filename = os.path.basename(x_path_absolute)
         file_id = x_path_filename.removesuffix("_hypergraph.pt" if self.is_hypergraph else "_graph.pt")
 
-        x = torch.load(x_path_absolute, weights_only=True)
-        x.x = normalize_graph(x.x[:, :self.min_dim])
+        x = torch.load(x_path_absolute)
+        # x.x = normalize_graph(x.x[:, :self.min_dim])
+        x.x = calc_pc(x.x)
         y = torch.tensor(self.id_to_label_dict[file_id], dtype=torch.long)
         return x, y-1 # y-1 to convert {1, 2} into {0, 1}
 
