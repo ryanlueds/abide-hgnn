@@ -80,7 +80,7 @@ class AbideDataset(Dataset):
             x.num_hyperedges = num_hyperedges
 
         y = torch.tensor(self.id_to_label_dict[file_id], dtype=torch.long)
-        return x, y-1 # y-1 to convert {1, 2} into {0, 1}
+        return x, 2-y # 2-y to convert {1=+, 2=-} into {0=-, 1=+}
 
 
 # class AbideDataset(Dataset):

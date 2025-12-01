@@ -116,7 +116,7 @@ class AbideDatasetDHG(Dataset):
         hg = dhg.Hypergraph(num_nodes, hedges)
         
         y = torch.tensor(self.id_to_label_dict[file_id], dtype=torch.long)
-        return x.x, y-1, hg
+        return x.x, 2-y, hg # 2-y to convert {1=+, 2=-} into {0=-, 1=+}
 
 
 if __name__ == "__main__":

@@ -56,7 +56,7 @@ class AbideDatasetMLP(Dataset):
         x_flat = x_tensor.flatten()
 
         y = torch.tensor(self.id_to_label_dict[file_id], dtype=torch.long)
-        return x_flat, y-1 # y-1 to convert {1, 2} into {0, 1}
+        return x_flat, 2-y # 2-y to convert {1=+, 2=-} into {0=-, 1=+}
 
 if __name__ == "__main__":
     foo_train = AbideDatasetMLP(train=True)
