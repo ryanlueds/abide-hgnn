@@ -36,6 +36,8 @@ class AbideDataset(Dataset):
         self.ablation = ablation
 
         all_paths = glob.glob(f'{self.dir}*.pt')
+        all_paths.sort()
+        all_paths = [p for p in all_paths if not os.path.basename(p).startswith('.')]
 
         df = pd.read_csv(PATH_ABIDE_LABELS)
         self.id_to_label_dict = dict(zip(df['FILE_ID'], df['DX_GROUP']))

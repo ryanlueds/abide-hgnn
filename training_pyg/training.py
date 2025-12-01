@@ -10,6 +10,7 @@ from dataset import AbideDataset
 
 print(config.DEVICE)
 torch.manual_seed(config.SEED)
+torch.use_deterministic_algorithms(True)
 
 abide_train = AbideDataset(is_hypergraph=True, train=True)
 abide_val = AbideDataset(is_hypergraph=True, train=False)

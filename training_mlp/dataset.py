@@ -25,6 +25,7 @@ class AbideDatasetMLP(Dataset):
         self.dir = PATH_HYPERGRAPH 
 
         all_paths = glob.glob(f'{self.dir}*.pt')
+        all_paths.sort()
 
         df = pd.read_csv(PATH_ABIDE_LABELS)
         self.id_to_label_dict = dict(zip(df['FILE_ID'], df['DX_GROUP']))
