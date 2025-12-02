@@ -10,6 +10,7 @@ from dataset import AbideDatasetMLP
 
 print(config.DEVICE)
 torch.manual_seed(config.SEED)
+torch.use_deterministic_algorithms(True)
 
 # 1. Load the ENTIRE dataset (split=1.0)
 full_dataset = AbideDatasetMLP(train=True, split=1.0, split_seed=config.SEED)

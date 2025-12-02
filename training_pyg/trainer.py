@@ -1,9 +1,10 @@
 import torch
 import torch.nn as nn
 from tqdm import tqdm
-import config as config
+import os
+import training_pyg.config as config
 from torchmetrics.classification import BinaryAUROC, BinaryAccuracy, BinaryPrecision, BinaryRecall
-from plotter import save_plot
+from training_pyg.plotter import save_plot
 
 class Trainer(object):
 
@@ -15,12 +16,11 @@ class Trainer(object):
         self.criterion = criterion
 
 
-    def fit(self, model, save_artifacts=True):
-        if save_artifacts:
-            history = {
-                'train_loss': [], 'train_acc': [], 'train_auroc': [], 'train_precision': [], 'train_recall': [],
-                'test_loss': [], 'test_acc': [], 'test_auroc': [], 'test_precision': [], 'test_recall': []
-            }
+    def fit(self, model, save_artifacts=True, ablation=False):
+        history = {
+            'train_loss': [], 'train_acc': [], 'train_auroc': [], 'train_precision': [], 'train_recall': [],
+            'test_loss': [], 'test_acc': [], 'test_auroc': [], 'test_precision': [], 'test_recall': []
+        }
 
         num_epochs = config.EPOCHS
         best_test_acc = -1.0
@@ -30,22 +30,26 @@ class Trainer(object):
             train_loss, train_acc, train_auroc, train_precision, train_recall = self.train_step(model, epoch)
             test_loss, test_acc, test_auroc, test_precision, test_recall = self.testing_step(model)
 
-            if save_artifacts:
-                history['train_loss'].append(train_loss)
-                history['train_acc'].append(train_acc)
-                history['train_auroc'].append(train_auroc)
-                history['train_precision'].append(train_precision)
-                history['train_recall'].append(train_recall)
-                history['test_loss'].append(test_loss)
-                history['test_acc'].append(test_acc)
-                history['test_auroc'].append(test_auroc)
-                history['test_precision'].append(test_precision)
-                history['test_recall'].append(test_recall)
+            history['train_loss'].append(train_loss)
+            history['train_acc'].append(train_acc)
+            history['train_auroc'].append(train_auroc)
+            history['train_precision'].append(train_precision)
+            history['train_recall'].append(train_recall)
+            history['test_loss'].append(test_loss)
+            history['test_acc'].append(test_acc)
+            history['test_auroc'].append(test_auroc)
+            history['test_precision'].append(test_precision)
+            history['test_recall'].append(test_recall)
 
             if test_acc > best_test_acc:
                 best_test_acc = test_acc
                 if save_artifacts:
-                    torch.save(model.state_dict(), "pyg_model.pt")
+                    folder_name = "ablation_pyg" if ablation else "pyg"
+                    save_dir = os.path.join("results", folder_name)
+                    os.makedirs(save_dir, exist_ok=True)
+
+                    save_path = os.path.join(save_dir, "pyg_model.pt")
+                    torch.save(model.state_dict(), save_path)
 
                 best_metrics = {
                     'loss': test_loss,
@@ -66,6 +70,7 @@ class Trainer(object):
         
             # 1. Loss Plot
             save_plot(
+                ablation=ablation,
                 train_metric=history['train_loss'],
                 test_metric=history['test_loss'],
                 metric_name="Loss"
@@ -73,6 +78,7 @@ class Trainer(object):
 
             # 2. AUROC Plot
             save_plot(
+                ablation=ablation,
                 train_metric=history['train_auroc'],
                 test_metric=history['test_auroc'],
                 metric_name="AUROC"
@@ -80,6 +86,7 @@ class Trainer(object):
 
             # 3. Accuracy Plot
             save_plot(
+                ablation=ablation,
                 train_metric=history['train_acc'],
                 test_metric=history['test_acc'],
                 metric_name="Accuracy"
@@ -87,6 +94,7 @@ class Trainer(object):
 
             # 4. Precision Plot
             save_plot(
+                ablation=ablation,
                 train_metric=history['train_precision'],
                 test_metric=history['test_precision'],
                 metric_name="Precision"
@@ -94,6 +102,7 @@ class Trainer(object):
 
             # 5. Recall Plot
             save_plot(
+                ablation=ablation,
                 train_metric=history['train_recall'],
                 test_metric=history['test_recall'],
                 metric_name="Recall"
@@ -101,7 +110,7 @@ class Trainer(object):
 
             print(f"\nCharts saved to 'charts' directory.")
 
-        return best_metrics
+        return best_metrics, history
 
     def train_step(self, model, epoch):
         model.train()

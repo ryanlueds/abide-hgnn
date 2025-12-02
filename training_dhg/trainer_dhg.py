@@ -42,7 +42,7 @@ class Trainer(object):
 
             if test_acc > best_test_acc:
                 best_test_acc = test_acc
-                torch.save(model.state_dict(), "dhg_hgnnp_model.pt")
+                torch.save(model.state_dict(), "dhg_model.pt")
                 
                 best_metrics = {
                     'loss': test_loss,

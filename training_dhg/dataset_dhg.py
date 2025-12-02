@@ -9,6 +9,7 @@ import os
 import torch.nn.functional as F
 import dhg
 import numpy as np
+from sklearn.model_selection import train_test_split
 
 PATH_GRAPH = "../data/graphs/"
 PATH_HYPERGRAPH = "../data/hypergraphs/"
@@ -72,25 +73,46 @@ def calc_pc(X):
     return PC
 
 class AbideDatasetDHG(Dataset):
-    def __init__(self, train=True, split=0.9, split_seed=0, ablation=False):
+    def __init__(self, train=True, split=0.8, split_seed=0, ablation=False):
         self.dir = PATH_HYPERGRAPH
         self.ablation = ablation
 
         all_paths = glob.glob(f"{self.dir}*.pt")
         all_paths.sort()
-        
+        all_paths = [p for p in all_paths if not os.path.basename(p).startswith('.')]
+
         df = pd.read_csv(PATH_ABIDE_LABELS)
         self.id_to_label_dict = dict(zip(df["FILE_ID"], df["DX_GROUP"]))
+        self.id_to_site_dict = dict(zip(df["FILE_ID"], df["SITE_ID"]))
 
-        rng = torch.Generator().manual_seed(split_seed)
-        perm = torch.randperm(len(all_paths), generator=rng).tolist()
-        cutoff = int(len(all_paths) * split)
-        chosen_idx = perm[:cutoff] if train else perm[cutoff:]
-        self.x_paths = [all_paths[i] for i in chosen_idx]
+        labels = []
+        sites = []
+        valid_paths = []
 
-        # Identify minimum time series length
-        self.min_dim = float("inf")
-        for path in all_paths: self.min_dim = min(self.min_dim, torch.load(path, weights_only=False).x.size(-1))
+        for p in all_paths:
+            x_path_filename = os.path.basename(p)
+            file_id = x_path_filename.removesuffix("_hypergraph.pt")
+            
+            # Handle potential type mismatch (CSV might have ints, filenames are strings)
+            label = self.id_to_label_dict.get(file_id) or self.id_to_label_dict.get(int(file_id) if file_id.isdigit() else None)
+            site = self.id_to_site_dict.get(file_id)
+            
+            if label is not None and site is not None:
+                labels.append(label)
+                sites.append(site)
+                valid_paths.append(p)
+            else:
+                print(f"Warning: Label/Site not found for {file_id}, excluding from split.")
+
+        strat_labels = [loc + str(lab) for lab, loc in zip(labels, sites)]
+        train_paths, test_paths = train_test_split(
+            valid_paths,
+            train_size=split,
+            stratify=strat_labels,
+            random_state=split_seed
+        )
+
+        self.x_paths = train_paths if train else test_paths
 
 
     def __len__(self):
@@ -124,7 +146,7 @@ class AbideDatasetDHG(Dataset):
         hedges = [tuple(sorted(set(ns))) for ns in buckets if len(ns) > 0]
         if self.ablation: hedges = [h for h in hedges if len(h) <= 2]
         hg = dhg.Hypergraph(num_nodes, hedges)
-        
+
         y = torch.tensor(self.id_to_label_dict[file_id], dtype=torch.long)
         return x.x, 2-y, hg # 2-y to convert {1=+, 2=-} into {0=-, 1=+}
 
