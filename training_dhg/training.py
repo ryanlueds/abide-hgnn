@@ -10,6 +10,7 @@ import dhg
 
 print(config.DEVICE)
 torch.manual_seed(config.SEED)
+torch.use_deterministic_algorithms(True)
 
 def collate_hg(batch):
     Xs, ys, hgs = zip(*batch)

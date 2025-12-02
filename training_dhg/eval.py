@@ -100,7 +100,7 @@ if __name__ == "__main__":
     # 3. Load Weights
     # Loading 'dhg_model.pt' as saved in trainer_dhg.py
     try:
-        model.load_state_dict(torch.load("dhg_hgnnp_model.pt"))
+        model.load_state_dict(torch.load("dhg_model.pt"))
         print("Successfully loaded 'dhg_model.pt'")
     except FileNotFoundError:
         print("Warning: 'dhg_model.pt' not found. Using random weights.")

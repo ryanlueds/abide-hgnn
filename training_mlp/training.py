@@ -8,6 +8,7 @@ from dataset import AbideDatasetMLP
 
 
 torch.manual_seed(config.SEED)
+torch.use_deterministic_algorithms(True)
 
 abide_train = AbideDatasetMLP(train=True)
 abide_val = AbideDatasetMLP(train=False)

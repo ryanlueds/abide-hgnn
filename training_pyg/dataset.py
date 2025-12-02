@@ -8,6 +8,7 @@ import pandas as pd
 import os
 import torch.nn.functional as F
 import numpy as np
+from sklearn.model_selection import train_test_split
 
 
 PATH_GRAPH = "../data/graphs/"
@@ -30,7 +31,7 @@ def calc_pc(X):
     return PC
 
 class AbideDataset(Dataset):
-    def __init__(self, is_hypergraph=True, train=True, split=0.9, split_seed=0, ablation=False):
+    def __init__(self, is_hypergraph=True, train=True, split=0.8, split_seed=0, ablation=False):
         self.is_hypergraph = is_hypergraph
         self.dir = PATH_HYPERGRAPH if is_hypergraph else PATH_GRAPH 
         self.ablation = ablation
@@ -42,11 +43,30 @@ class AbideDataset(Dataset):
         df = pd.read_csv(PATH_ABIDE_LABELS)
         self.id_to_label_dict = dict(zip(df['FILE_ID'], df['DX_GROUP']))
 
-        rng = torch.Generator().manual_seed(split_seed)
-        perm = torch.randperm(len(all_paths), generator=rng).tolist()
-        cutoff = int(len(all_paths) * split)
-        chosen_idx = perm[:cutoff] if train else perm[cutoff:]
-        self.x_paths = [all_paths[i] for i in chosen_idx]
+        labels = []
+        valid_paths = []
+
+        for p in all_paths:
+            x_path_filename = os.path.basename(p)
+            file_id = x_path_filename.removesuffix("_hypergraph.pt" if self.is_hypergraph else "_graph.pt")
+            
+            # Handle potential type mismatch (CSV might have ints, filenames are strings)
+            label = self.id_to_label_dict.get(file_id) or self.id_to_label_dict.get(int(file_id) if file_id.isdigit() else None)
+            
+            if label is not None:
+                labels.append(2 - label)
+                valid_paths.append(p)
+            else:
+                print(f"Warning: Label not found for {file_id}, excluding from split.")
+
+        train_paths, test_paths = train_test_split(
+            valid_paths,
+            train_size=split,
+            stratify=labels,
+            random_state=split_seed
+        )
+
+        self.x_paths = train_paths if train else test_paths
 
 
     def __len__(self):
