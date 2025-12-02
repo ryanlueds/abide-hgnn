@@ -42,6 +42,15 @@ class AbideDatasetMLP(Dataset):
 
     def __len__(self):
         return len(self.x_paths)
+    
+    def get_all_labels(self):
+        labels = []
+        for path in self.x_paths:
+            x_path_filename = os.path.basename(path)
+            file_id = x_path_filename.removesuffix("_hypergraph.pt")
+            # 2-y to convert {1=+, 2=-} into {0=-, 1=+} (Matches __getitem__)
+            labels.append(2 - self.id_to_label_dict[file_id])
+        return labels
 
     def __getitem__(self, idx):
         x_path_absolute = self.x_paths[idx]

@@ -22,6 +22,7 @@ class Trainer(object):
 
         num_epochs = config.EPOCHS
         best_test_acc = 0.0
+        best_metrics = {}
 
         for epoch in range(num_epochs):
             train_loss, train_acc, train_auroc, train_precision, train_recall = self.train_step(model, epoch)
@@ -41,6 +42,14 @@ class Trainer(object):
             if test_acc > best_test_acc:
                 best_test_acc = test_acc
                 torch.save(model.state_dict(), "mlp_model.pt")
+
+                best_metrics = {
+                    'loss': test_loss,
+                    'acc': test_acc,
+                    'auroc': test_auroc,
+                    'precision': test_precision,
+                    'recall': test_recall
+                }
 
             print(
                 f"epoch {epoch+1:>3,}: "
@@ -86,6 +95,8 @@ class Trainer(object):
         )
 
         print(f"\nCharts saved to 'charts' directory.")
+
+        return best_metrics
 
     def train_step(self, model, epoch):
         model.train()

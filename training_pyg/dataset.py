@@ -52,6 +52,14 @@ class AbideDataset(Dataset):
     def __len__(self):
         return len(self.x_paths)
 
+    def get_all_labels(self):
+        labels = []
+        for path in self.x_paths:
+            x_path_filename = os.path.basename(path)
+            file_id = x_path_filename.removesuffix("_hypergraph.pt" if self.is_hypergraph else "_graph.pt")
+            # 2-y to match the __getitem__ logic {1=+, 2=-} -> {0=-, 1=+}
+            labels.append(2 - self.id_to_label_dict[file_id])
+        return labels
 
     def __getitem__(self, idx):
         x_path_absolute = self.x_paths[idx]
