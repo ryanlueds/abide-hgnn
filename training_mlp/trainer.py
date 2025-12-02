@@ -1,9 +1,10 @@
 import torch
 import torch.nn as nn
 from tqdm import tqdm
-import config as config
+import training_mlp.config as config
 from torchmetrics.classification import BinaryAUROC, BinaryAccuracy, BinaryPrecision, BinaryRecall
-from plotter import save_plot
+import os
+from training_mlp.plotter import save_plot
 
 class Trainer(object):
 
@@ -14,7 +15,7 @@ class Trainer(object):
         self.test_loader = test_loader
         self.criterion = criterion
 
-    def fit(self, model):
+    def fit(self, model, save_artifacts=True):
         history = {
             'train_loss': [], 'train_acc': [], 'train_auroc': [], 'train_precision': [], 'train_recall': [],
             'test_loss': [], 'test_acc': [], 'test_auroc': [], 'test_precision': [], 'test_recall': []
@@ -41,7 +42,13 @@ class Trainer(object):
 
             if test_acc > best_test_acc:
                 best_test_acc = test_acc
-                torch.save(model.state_dict(), "mlp_model.pt")
+                if save_artifacts:
+                    folder_name = "mlp"
+                    save_dir = os.path.join("results", folder_name)
+                    os.makedirs(save_dir, exist_ok=True)
+
+                    save_path = os.path.join(save_dir, "mlp_model.pt")
+                    torch.save(model.state_dict(), save_path)
 
                 best_metrics = {
                     'loss': test_loss,
@@ -96,7 +103,7 @@ class Trainer(object):
 
         print(f"\nCharts saved to 'charts' directory.")
 
-        return best_metrics
+        return best_metrics, history
 
     def train_step(self, model, epoch):
         model.train()
@@ -124,7 +131,7 @@ class Trainer(object):
 
         probs = torch.cat(probs)
         targets = torch.cat(targets)
-        train_loss = running_train_loss / len(self.train_loader.dataset)
+        train_loss = running_train_loss / len(self.train_loader)
         train_acc = acc_metric(probs, targets).item()
         train_auroc = auroc_metric(probs, targets).item()
         train_precision = precision_metric(probs, targets).item()
@@ -155,7 +162,7 @@ class Trainer(object):
 
         probs = torch.cat(probs)
         targets = torch.cat(targets)
-        test_loss = running_test_loss / len(self.test_loader.dataset)
+        test_loss = running_test_loss / len(self.test_loader)
         test_acc = acc_metric(probs, targets).item()
         test_auroc = auroc_metric(probs, targets).item()
         test_precision = precision_metric(probs, targets).item()
