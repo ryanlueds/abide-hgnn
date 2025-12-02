@@ -64,44 +64,45 @@ class Trainer(object):
                 f"test loss: {test_loss:.4f}, test acc: {test_acc:.4%}, test AUROC: {test_auroc:.4f}"
             )
 
-        print(f"--> Saved new best model (Acc: {best_test_acc:.4%})")
+        if save_artifacts:
+            print(f"--> Saved new best model (Acc: {best_test_acc:.4%})")
 
-        # 1. Loss Plot
-        save_plot(
-            train_metric=history['train_loss'],
-            test_metric=history['test_loss'],
-            metric_name="Loss"
-        )
+            # 1. Loss Plot
+            save_plot(
+                train_metric=history['train_loss'],
+                test_metric=history['test_loss'],
+                metric_name="Loss"
+            )
 
-        # 2. AUROC Plot
-        save_plot(
-            train_metric=history['train_auroc'],
-            test_metric=history['test_auroc'],
-            metric_name="AUROC"
-        )
+            # 2. AUROC Plot
+            save_plot(
+                train_metric=history['train_auroc'],
+                test_metric=history['test_auroc'],
+                metric_name="AUROC"
+            )
 
-        # 3. Accuracy Plot
-        save_plot(
-            train_metric=history['train_acc'],
-            test_metric=history['test_acc'],
-            metric_name="Accuracy"
-        )
+            # 3. Accuracy Plot
+            save_plot(
+                train_metric=history['train_acc'],
+                test_metric=history['test_acc'],
+                metric_name="Accuracy"
+            )
 
-        # 4. Precision Plot
-        save_plot(
-            train_metric=history['train_precision'],
-            test_metric=history['test_precision'],
-            metric_name="Precision"
-        )
+            # 4. Precision Plot
+            save_plot(
+                train_metric=history['train_precision'],
+                test_metric=history['test_precision'],
+                metric_name="Precision"
+            )
 
-        # 5. Recall Plot
-        save_plot(
-            train_metric=history['train_recall'],
-            test_metric=history['test_recall'],
-            metric_name="Recall"
-        )
+            # 5. Recall Plot
+            save_plot(
+                train_metric=history['train_recall'],
+                test_metric=history['test_recall'],
+                metric_name="Recall"
+            )
 
-        print(f"\nCharts saved to 'charts' directory.")
+            print(f"\nCharts saved to 'charts' directory.")
 
         return best_metrics, history
 

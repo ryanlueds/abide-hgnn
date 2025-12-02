@@ -88,12 +88,11 @@ class AbideDatasetMLP(Dataset):
         file_id = x_path_filename.removesuffix("_hypergraph.pt")
 
         data = torch.load(x_path_absolute, weights_only=False)
-        # truncate time series
-        # x_tensor = data.x[:, :self.min_dim]
         
-        x_tensor = calc_pc(data.x)
-
-        x_flat = x_tensor.flatten()
+        # PC is a symmetric matrix with all 1 diagonal
+        x = calc_pc(data.x)
+        i, j = torch.triu_indices(x.size(0), x.size(1), offset=1)
+        x_flat = x[i, j]
 
         y = torch.tensor(self.id_to_label_dict[file_id], dtype=torch.long)
         return x_flat, 2-y # 2-y to convert {1=+, 2=-} into {0=-, 1=+}

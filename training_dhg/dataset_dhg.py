@@ -11,9 +11,9 @@ import dhg
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-PATH_GRAPH = "../data/graphs/"
-PATH_HYPERGRAPH = "../data/hypergraphs/"
-PATH_ABIDE_LABELS = "../abide/Phenotypic_V1_0b_preprocessed1.csv"
+PATH_GRAPH = "data/graphs/"
+PATH_HYPERGRAPH = "data/hypergraphs/"
+PATH_ABIDE_LABELS = "abide/Phenotypic_V1_0b_preprocessed1.csv"
 
 # torch.serialization.add_safe_globals([Data, DataEdgeAttr, DataTensorAttr, GlobalStorage])
 
@@ -105,27 +105,34 @@ class AbideDatasetDHG(Dataset):
                 print(f"Warning: Label/Site not found for {file_id}, excluding from split.")
 
         strat_labels = [loc + str(lab) for lab, loc in zip(labels, sites)]
-        train_paths, test_paths = train_test_split(
-            valid_paths,
-            train_size=split,
-            stratify=strat_labels,
-            random_state=split_seed
-        )
-
+        if split == 1.0:
+            train_paths = valid_paths
+        else:
+            train_paths, test_paths = train_test_split(
+                valid_paths,
+                train_size=split,
+                stratify=strat_labels,
+                random_state=split_seed
+            )
         self.x_paths = train_paths if train else test_paths
 
 
     def __len__(self):
         return len(self.x_paths)
     
-    def get_all_labels(self):
+    def get_strat_labels(self):
         labels = []
+        sites = []
         for path in self.x_paths:
             x_path_filename = os.path.basename(path)
             file_id = x_path_filename.removesuffix("_hypergraph.pt")
             # 2-y to match the __getitem__ logic {1=+, 2=-} -> {0=-, 1=+}
             labels.append(2 - self.id_to_label_dict[file_id])
-        return labels
+            sites.append(self.id_to_site_dict.get(file_id))
+
+        strat_labels = [loc + str(lab) for lab, loc in zip(labels, sites)]
+        
+        return strat_labels
 
 
     def __getitem__(self, idx):
