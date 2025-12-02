@@ -83,8 +83,10 @@ class AbideDatasetDHG(Dataset):
 
         df = pd.read_csv(PATH_ABIDE_LABELS)
         self.id_to_label_dict = dict(zip(df["FILE_ID"], df["DX_GROUP"]))
+        self.id_to_site_dict = dict(zip(df["FILE_ID"], df["SITE_ID"]))
 
         labels = []
+        sites = []
         valid_paths = []
 
         for p in all_paths:
@@ -93,17 +95,20 @@ class AbideDatasetDHG(Dataset):
             
             # Handle potential type mismatch (CSV might have ints, filenames are strings)
             label = self.id_to_label_dict.get(file_id) or self.id_to_label_dict.get(int(file_id) if file_id.isdigit() else None)
+            site = self.id_to_site_dict.get(file_id)
             
-            if label is not None:
-                labels.append(2 - label)
+            if label is not None and site is not None:
+                labels.append(label)
+                sites.append(site)
                 valid_paths.append(p)
             else:
-                print(f"Warning: Label not found for {file_id}, excluding from split.")
+                print(f"Warning: Label/Site not found for {file_id}, excluding from split.")
 
+        strat_labels = [loc + str(lab) for lab, loc in zip(labels, sites)]
         train_paths, test_paths = train_test_split(
             valid_paths,
             train_size=split,
-            stratify=labels,
+            stratify=strat_labels,
             random_state=split_seed
         )
 
@@ -132,7 +137,7 @@ class AbideDatasetDHG(Dataset):
         hedges = [tuple(sorted(set(ns))) for ns in buckets if len(ns) > 0]
         if self.ablation: hedges = [h for h in hedges if len(h) <= 2]
         hg = dhg.Hypergraph(num_nodes, hedges)
-        
+
         y = torch.tensor(self.id_to_label_dict[file_id], dtype=torch.long)
         return x.x, 2-y, hg # 2-y to convert {1=+, 2=-} into {0=-, 1=+}
 
