@@ -14,6 +14,7 @@ data/**
 **/hgnnp_charts
 **/pyg_charts
 **/mlp_charts
+results/**
 
 pyg_model.pt
 dhg_model.pt
