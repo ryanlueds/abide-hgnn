@@ -23,7 +23,7 @@ class Trainer(object):
         }
 
         num_epochs = config.EPOCHS
-        best_test_acc = 0.0
+        best_test_auroc = -1.0
         best_metrics = {}
 
         for epoch in range(num_epochs):
@@ -41,8 +41,8 @@ class Trainer(object):
             history['test_precision'].append(test_precision)
             history['test_recall'].append(test_recall)
 
-            if test_acc > best_test_acc:
-                best_test_acc = test_acc
+            if test_auroc > best_test_auroc:
+                best_test_auroc = test_auroc
                 if save_artifacts:
                     folder_name = "ablation_dhg" if ablation else "dhg"
                     save_dir = os.path.join("results", folder_name)
@@ -66,7 +66,7 @@ class Trainer(object):
             )
 
         if save_artifacts:
-            print(f"--> Saved new best model (Acc: {best_test_acc:.4%})")
+            print(f"--> Saved new best model (Auroc: {best_test_auroc:.4%})")
             save_plot(ablation=ablation, train_metric=history['train_loss'], test_metric=history['test_loss'], metric_name="Loss")
             save_plot(ablation=ablation, train_metric=history['train_auroc'], test_metric=history['test_auroc'], metric_name="AUROC")
             save_plot(ablation=ablation, train_metric=history['train_acc'], test_metric=history['test_acc'], metric_name="Accuracy")

@@ -16,14 +16,14 @@ print(config.DEVICE)
 torch.manual_seed(config.SEED)
 torch.use_deterministic_algorithms(True)
 
-def write_eval_txt(best_metrics: dict, ablation: bool, cv: bool):
+def write_eval_txt(best_metrics: dict, ablation: bool, cv: bool, best_std_metrics=None):
     save_dir = os.path.join("results", "ablation_pyg" if ablation else "pyg")
     os.makedirs(save_dir, exist_ok=True)
     file_name = "cv_eval_summary.txt" if cv else "eval_summary.txt"
     file_path = os.path.join(save_dir, file_name)
 
     format_map = {
-        'acc': ('Accuracy', 100, '%'), 'auroc': ('AUROC', 1, ''),
+        'acc': ('Accuracy', 1, ''), 'auroc': ('AUROC', 1, ''),
         'precision': ('Precision', 1, ''), 'recall': ('Recall', 1, '')
     }
 
@@ -37,7 +37,10 @@ def write_eval_txt(best_metrics: dict, ablation: bool, cv: bool):
                 name, mult, suff = format_map[k]
                 if cv:
                     name = f"AVG {name}"
-                f.write(f"{name:<11} {v * mult:.4f}{suff}\n")
+                if best_std_metrics is not None:
+                    f.write(f"{name:<11} {v * mult:.4f}±{best_std_metrics[k]:.4f}{suff}\n")
+                else:
+                    f.write(f"{name:<11} {v * mult:.4f}{suff}\n")
         f.write("=" * 30 + "\n")
 
 
@@ -88,14 +91,17 @@ def train_pyg(cv=False, ablation=False):
         print("="*30)
 
         best_avg_metrics = {}
+        best_std_metrics = {}
         # Calculate averages as before...
         for key in ['acc', 'auroc', 'precision', 'recall']:
-             best_avg_metrics[key] = np.mean([m[key] for m in fold_metrics])
+            values = [m[key] for m in fold_metrics]
+            best_avg_metrics[key] = np.mean(values)
+            best_std_metrics[key] = np.std(values)
 
-        write_eval_txt(best_avg_metrics, ablation=ablation, cv=cv)
+        write_eval_txt(best_avg_metrics, ablation=ablation, cv=cv, best_std_metrics=best_std_metrics)
         
-        print(f"Avg Accuracy:  {best_avg_metrics['acc']:.4%}")
-        print(f"Avg AUROC:     {best_avg_metrics['auroc']:.4f}")
+        print(f"Avg Accuracy:  {best_avg_metrics['acc']:.4%} ± {best_std_metrics['acc']:.4%}")
+        print(f"Avg AUROC:     {best_avg_metrics['auroc']:.4f} ± {best_std_metrics['auroc']:.4%}")
         
         # --- 2. Generate Aggregated Plots (New Logic) ---
         print("\nGeneratng CV Charts (Median + IQR)...")

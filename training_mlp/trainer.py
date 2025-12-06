@@ -22,7 +22,7 @@ class Trainer(object):
         }
 
         num_epochs = config.EPOCHS
-        best_test_acc = 0.0
+        best_test_auroc = -1.0
         best_metrics = {}
 
         for epoch in range(num_epochs):
@@ -40,8 +40,8 @@ class Trainer(object):
             history['test_precision'].append(test_precision)
             history['test_recall'].append(test_recall)
 
-            if test_acc > best_test_acc:
-                best_test_acc = test_acc
+            if test_auroc > best_test_auroc:
+                best_test_auroc = test_auroc
                 if save_artifacts:
                     folder_name = "mlp"
                     save_dir = os.path.join("results", folder_name)
@@ -65,7 +65,7 @@ class Trainer(object):
             )
 
         if save_artifacts:
-            print(f"--> Saved new best model (Acc: {best_test_acc:.4%})")
+            print(f"--> Saved new best model (Auroc: {best_test_auroc:.4%})")
 
             # 1. Loss Plot
             save_plot(
