@@ -1,28 +1,212 @@
 import torch
 import torch.optim as optim
-import config as config
-# from torch_geometric.loader import DataLoader
-from torch.utils.data import DataLoader
-from trainer_dhg import Trainer
-from dataset_dhg import AbideDatasetDHG
+import training_dhg.config as config
+from torch.utils.data import DataLoader, Subset
+from sklearn.model_selection import StratifiedKFold
+from training_dhg.trainer_dhg import Trainer
+from training_dhg.dataset_dhg import AbideDatasetDHG
 import dhg
+import numpy as np
+from training_dhg.plotter import save_cv_plot
+import os
 
+from sklearn.model_selection import StratifiedKFold
+from torch.utils.data import Subset
 
 print(config.DEVICE)
 torch.manual_seed(config.SEED)
 torch.use_deterministic_algorithms(True)
 
+def write_eval_txt(best_metrics: dict, ablation: bool, cv: bool, best_std_metrics=None):
+    save_dir = os.path.join("results", "ablation_dhg" if ablation else "dhg")
+    os.makedirs(save_dir, exist_ok=True)
+    file_name = "cv_eval_summary.txt" if cv else "eval_summary.txt"
+    file_path = os.path.join(save_dir, file_name)
+
+    format_map = {
+        'acc': ('Accuracy', 1, ''), 'auroc': ('AUROC', 1, ''),
+        'precision': ('Precision', 1, ''), 'recall': ('Recall', 1, '')
+    }
+
+    with open(file_path, "w") as f:
+        if cv:  
+            f.write("=" * 30 + "\nCV AVG EVALUATION RESULTS\n" + "=" * 30 + "\n")
+        else:
+            f.write("=" * 30 + "\nFINAL EVALUATION RESULTS\n" + "=" * 30 + "\n")
+        for k, v in best_metrics.items():
+            if k in format_map:
+                name, mult, suff = format_map[k]
+                if cv:
+                    name = f"AVG {name}"
+                if best_std_metrics is not None:
+                    f.write(f"{name:<11} {v * mult:.4f}±{best_std_metrics[k]:.4f}{suff}\n")
+                else:
+                    f.write(f"{name:<11} {v * mult:.4f}{suff}\n")
+        f.write("=" * 30 + "\n")
+
+
 def collate_hg(batch):
     Xs, ys, hgs = zip(*batch)
     return list(Xs), list(ys), list(hgs)
 
-abide_train = AbideDatasetDHG(train=True)
-abide_val = AbideDatasetDHG(train=False)
 
-train_dataloader = DataLoader(abide_train, batch_size=config.BATCH_SIZE, shuffle=True, collate_fn=collate_hg)
-val_dataloader = DataLoader(abide_val, batch_size=config.BATCH_SIZE, shuffle=False, collate_fn=collate_hg)
+def train_dhg(cv=False, ablation=False):
+    if cv:
+        full_dataset = AbideDatasetDHG(train=True, split=1.0, ablation=ablation, split_seed=config.SEED)
+        labels = full_dataset.get_strat_labels() 
+        skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=config.SEED)
 
-model = dhg.models.HGNNP(in_channels=abide_train[0][0].shape[-1], hid_channels=128, num_classes=2).to(config.DEVICE)
-optimizer = optim.Adam(model.parameters(), lr=config.LEARN_RATE, weight_decay=config.WEIGHT_DECAY)
-trainer = Trainer(config.DEVICE, optimizer, train_dataloader, val_dataloader)
-trainer.fit(model)
+        print(f"Starting Stratified K-Fold (5 Splits)...")
+
+        fold_metrics = []
+        # Store history for every fold to aggregate later
+        # Structure: {'train_loss': [[fold1_epochs], [fold2_epochs]...], ...}
+        cv_history_collection = {
+            'train_loss': [], 'train_acc': [], 'train_auroc': [], 'train_precision': [], 'train_recall': [],
+            'test_loss': [], 'test_acc': [], 'test_auroc': [], 'test_precision': [], 'test_recall': []
+        }
+
+        for fold, (train_idx, val_idx) in enumerate(skf.split(np.zeros(len(labels)), labels)):
+            print(f"\n--- Fold {fold+1}/5 ---")
+            
+            train_sub = Subset(full_dataset, train_idx)
+            val_sub = Subset(full_dataset, val_idx)
+            
+            train_dataloader = DataLoader(train_sub, batch_size=config.BATCH_SIZE, shuffle=True, collate_fn=collate_hg)
+            val_dataloader = DataLoader(val_sub, batch_size=len(val_sub), shuffle=False, collate_fn=collate_hg)
+            
+            model = dhg.models.HGNNP(in_channels=full_dataset[0][0].shape[-1], hid_channels=128, num_classes=2).to(config.DEVICE)
+            
+            optimizer = optim.Adam(model.parameters(), lr=config.LEARN_RATE, weight_decay=config.WEIGHT_DECAY)
+            trainer = Trainer(config.DEVICE, optimizer, train_dataloader, val_dataloader)
+            
+            # UPDATED: Unpack tuple
+            best_fold_metrics, fold_history = trainer.fit(model, save_artifacts=False, ablation=ablation)
+            fold_metrics.append(best_fold_metrics)
+            
+            # Collect history
+            for k, v in fold_history.items():
+                cv_history_collection[k].append(v)
+            
+            print(f"    > Fold Result: Acc: {best_fold_metrics['acc']:.4%}, AUROC: {best_fold_metrics['auroc']:.4f}")
+
+        # --- 1. Average Scalar Results (Existing Logic) ---
+        print("\n" + "="*30)
+        print("FINAL CROSS-VALIDATION RESULTS")
+        print("="*30)
+
+        best_avg_metrics = {}
+        best_std_metrics = {}
+        # Calculate averages as before...
+        for key in ['acc', 'auroc', 'precision', 'recall']:
+            values = [m[key] for m in fold_metrics]
+            best_avg_metrics[key] = np.mean(values)
+            best_std_metrics[key] = np.std(values)
+
+        write_eval_txt(best_avg_metrics, ablation=ablation, cv=cv, best_std_metrics=best_std_metrics)
+        
+        print(f"Avg Accuracy:  {best_avg_metrics['acc']:.4%} ± {best_std_metrics['acc']:.4%}")
+        print(f"Avg AUROC:     {best_avg_metrics['auroc']:.4f} ± {best_std_metrics['auroc']:.4%}")
+        
+        # --- 2. Generate Aggregated Plots (New Logic) ---
+        print("\nGeneratng CV Charts (Median + IQR)...")
+        
+        metric_pairs = [
+            ('Loss', 'train_loss', 'test_loss'),
+            ('Accuracy', 'train_acc', 'test_acc'),
+            ('AUROC', 'train_auroc', 'test_auroc'),
+            ('Precision', 'train_precision', 'test_precision'),
+            ('Recall', 'train_recall', 'test_recall'),
+        ]
+
+        for pretty_name, train_key, test_key in metric_pairs:
+            # Helper to calc stats
+            def get_stats(key):
+                # Stack folds: shape (n_folds, n_epochs)
+                data = np.array(cv_history_collection[key]) 
+                return {
+                    'median': np.median(data, axis=0),
+                    'q1': np.quantile(data, 0.25, axis=0),
+                    'q3': np.quantile(data, 0.75, axis=0)
+                }
+
+            train_stats = get_stats(train_key)
+            test_stats = get_stats(test_key)
+            
+            save_cv_plot(
+                ablation=ablation,
+                train_stats=train_stats,
+                test_stats=test_stats,
+                metric_name=pretty_name
+            )
+        
+        print("CV Charts saved to 'charts_cv' directory.")
+        print("="*30)
+
+    else:
+        # Non-CV Branch
+        abide_train = AbideDatasetDHG(train=True, ablation=ablation, split_seed=config.SEED)
+        abide_val = AbideDatasetDHG( train=False, ablation=ablation, split_seed=config.SEED)
+
+        train_dataloader = DataLoader(abide_train, batch_size=config.BATCH_SIZE, shuffle=True, collate_fn=collate_hg)
+        val_dataloader = DataLoader(abide_val, batch_size=abide_val.__len__(), shuffle=False, collate_fn=collate_hg)
+
+        model = dhg.models.HGNNP(in_channels=abide_train[0][0].shape[-1], hid_channels=128, num_classes=2).to(config.DEVICE)
+        optimizer = optim.Adam(model.parameters(), lr=config.LEARN_RATE, weight_decay=config.WEIGHT_DECAY)
+        trainer = Trainer(config.DEVICE, optimizer, train_dataloader, val_dataloader)
+        
+        # UPDATED: Unpack tuple (we ignore history here as it's saved inside fit already for single runs)
+        best_metrics, _ = trainer.fit(model, ablation=ablation)
+
+        write_eval_txt(best_metrics, ablation=ablation, cv=cv)
+
+
+
+
+# # 1. Load the ENTIRE dataset (split=1.0 means train gets everything)
+# full_dataset = AbideDatasetDHG(train=True, split=1.0, split_seed=config.SEED)
+
+# # 2. Get labels for Stratification
+# labels = full_dataset.get_all_labels()
+
+# # 3. Setup Cross Validation
+# skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=config.SEED)
+# fold_results = []
+
+# print(f"Starting 5-Fold Cross Validation on {len(full_dataset)} samples...")
+
+# for fold_idx, (train_idx, val_idx) in enumerate(skf.split(np.zeros(len(labels)), labels)):
+#     print(f"\n{'='*20} Fold {fold_idx+1}/5 {'='*20}")
+    
+#     # 4. Create Subsets
+#     train_subset = Subset(full_dataset, train_idx)
+#     val_subset = Subset(full_dataset, val_idx)
+    
+#     train_loader = DataLoader(train_subset, batch_size=config.BATCH_SIZE, shuffle=True, collate_fn=collate_hg)
+#     val_loader = DataLoader(val_subset, batch_size=config.BATCH_SIZE, shuffle=False, collate_fn=collate_hg)
+    
+#     # 5. Re-initialize Model and Optimizer (Fresh start for every fold)
+#     # Note: Accessing first element of subset to get input dim: full_dataset[0][0]
+#     model = dhg.models.UniSAGE(in_channels=full_dataset[0][0].shape[-1], hid_channels=128, num_classes=2).to(config.DEVICE)
+#     optimizer = optim.Adam(model.parameters(), lr=config.LEARN_RATE, weight_decay=config.WEIGHT_DECAY)
+    
+#     # 6. Train
+#     trainer = Trainer(config.DEVICE, optimizer, train_loader, val_loader)
+#     metrics = trainer.fit(model)
+#     fold_results.append(metrics)
+
+# # 7. Aggregate and Print Results
+# print(f"\n{'='*40}")
+# print("CROSS VALIDATION RESULTS (Average over 5 folds)")
+# print(f"{'='*40}")
+
+# avg_acc = np.mean([m['acc'] for m in fold_results])
+# avg_auroc = np.mean([m['auroc'] for m in fold_results])
+# avg_prec = np.mean([m['precision'] for m in fold_results])
+# avg_rec = np.mean([m['recall'] for m in fold_results])
+
+# print(f"Avg Accuracy:  {avg_acc:.4%}")
+# print(f"Avg AUROC:     {avg_auroc:.4f}")
+# print(f"Avg Precision: {avg_prec:.4f}")
+# print(f"Avg Recall:    {avg_rec:.4f}")
+# print(f"{'='*40}")

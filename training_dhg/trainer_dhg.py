@@ -1,9 +1,10 @@
 import torch
 import torch.nn as nn
 from tqdm import tqdm
-import config as config
+import training_dhg.config as config
 from torchmetrics.classification import BinaryAUROC, BinaryAccuracy, BinaryPrecision, BinaryRecall
-from plotter import save_plot
+from training_dhg.plotter import save_plot
+import os
 
 class Trainer(object):
 
@@ -15,14 +16,15 @@ class Trainer(object):
         self.criterion = criterion
 
 
-    def fit(self, model):
+    def fit(self, model, save_artifacts=True, ablation=False):
         history = {
             'train_loss': [], 'train_acc': [], 'train_auroc': [], 'train_precision': [], 'train_recall': [],
             'test_loss': [], 'test_acc': [], 'test_auroc': [], 'test_precision': [], 'test_recall': []
         }
 
         num_epochs = config.EPOCHS
-        best_test_acc = 0.0
+        best_test_auroc = -1.0
+        best_metrics = {}
 
         for epoch in range(num_epochs):
             train_loss, train_acc, train_auroc, train_precision, train_recall = self.train_step(model, epoch)
@@ -39,9 +41,23 @@ class Trainer(object):
             history['test_precision'].append(test_precision)
             history['test_recall'].append(test_recall)
 
-            if test_acc > best_test_acc:
-                best_test_acc = test_acc
-                torch.save(model.state_dict(), "dhg_model.pt")
+            if test_auroc > best_test_auroc:
+                best_test_auroc = test_auroc
+                if save_artifacts:
+                    folder_name = "ablation_dhg" if ablation else "dhg"
+                    save_dir = os.path.join("results", folder_name)
+                    os.makedirs(save_dir, exist_ok=True)
+
+                    save_path = os.path.join(save_dir, "dhg_model.pt")
+                    torch.save(model.state_dict(), save_path)
+                
+                best_metrics = {
+                    'loss': test_loss,
+                    'acc': test_acc,
+                    'auroc': test_auroc,
+                    'precision': test_precision,
+                    'recall': test_recall
+                }
 
             print(
                 f"epoch {epoch+1:>3,}: "
@@ -49,45 +65,16 @@ class Trainer(object):
                 f"test loss: {test_loss:.4f}, test acc: {test_acc:.4%}, test AUROC: {test_auroc:.4f}"
             )
 
-        print(f"--> Saved new best model (Acc: {best_test_acc:.4%})")
+        if save_artifacts:
+            print(f"--> Saved new best model (Auroc: {best_test_auroc:.4%})")
+            save_plot(ablation=ablation, train_metric=history['train_loss'], test_metric=history['test_loss'], metric_name="Loss")
+            save_plot(ablation=ablation, train_metric=history['train_auroc'], test_metric=history['test_auroc'], metric_name="AUROC")
+            save_plot(ablation=ablation, train_metric=history['train_acc'], test_metric=history['test_acc'], metric_name="Accuracy")
+            save_plot(ablation=ablation, train_metric=history['train_precision'], test_metric=history['test_precision'], metric_name="Precision")
+            save_plot(ablation=ablation, train_metric=history['train_recall'], test_metric=history['test_recall'], metric_name="Recall")
+            print(f"\nCharts saved to 'charts' directory.")
 
-        # 1. Loss Plot
-        save_plot(
-            train_metric=history['train_loss'],
-            test_metric=history['test_loss'],
-            metric_name="Loss"
-        )
-
-        # 2. AUROC Plot
-        save_plot(
-            train_metric=history['train_auroc'],
-            test_metric=history['test_auroc'],
-            metric_name="AUROC"
-        )
-
-        # 3. Accuracy Plot
-        save_plot(
-            train_metric=history['train_acc'],
-            test_metric=history['test_acc'],
-            metric_name="Accuracy"
-        )
-
-        # 4. Precision Plot
-        save_plot(
-            train_metric=history['train_precision'],
-            test_metric=history['test_precision'],
-            metric_name="Precision"
-        )
-
-        # 5. Recall Plot
-        save_plot(
-            train_metric=history['train_recall'],
-            test_metric=history['test_recall'],
-            metric_name="Recall"
-        )
-
-        print(f"\nCharts saved to 'charts' directory.")
-
+        return best_metrics, history
 
     def train_step(self, model, epoch):
         model.train()
